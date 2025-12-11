@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Арқан Тартыс — Интерактивті математика</title>
+<style>
+:root{
+--bg:#fff9ec;
+--red:#d42f2f;
+--blue:#1366d6;
+--orange:#f28500;
+--panel: rgba(255,255,255,0.95);
+--shadow: rgba(0,0,0,0.15);
+--highlight:#fbe8a6;
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Noto Sans', sans-serif;}
+body{background:linear-gradient(180deg,#fff9ec,#fff5d4);padding:10px;}
+.wrap{max-width:1200px;margin:auto;}
+h1{text-align:center;margin-bottom:20px;color:#6b4b2a;font-size:32px;text-shadow:0 2px 4px rgba(0,0,0,0.1);}
+.board{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;}
+.team{width:45%;background:var(--panel);padding:15px;border-radius:15px;box-shadow:0 5px 15px var(--shadow);transition:transform 0.3s;}
+.team:hover{transform:scale(1.02);}
+.team h2{text-align:center;margin-bottom:10px;font-size:24px;color:#6b4b2a;}
+.score{font-size:40px;font-weight:bold;text-align:center;margin-bottom:10px;color:#333;}
+.progress-container{background:#eee;height:20px;border-radius:10px;overflow:hidden;margin-bottom:10px;}
+.progress{height:100%;width:0%;border-radius:10px;transition: width 0.5s ease, background 0.5s ease;}
+.calculator{display:flex;justify-content:center;gap:5px;margin-bottom:10px;}
+.calculator input{width:60px;padding:8px;font-size:18px;text-align:center;border-radius:8px;border:1px solid #ccc;transition:0.3s;}
+.calculator input:focus{border-color:var(--orange);outline:none;box-shadow:0 0 5px var(--orange);}
+.calculator button{padding:8px 12px;font-size:16px;border-radius:8px;border:none;background:var(--orange);color:#fff;cursor:pointer;transition: all 0.3s;}
+.calculator button:hover{opacity:0.8;transform:scale(1.05);}
+.message{text-align:center;font-weight:bold;font-size:20px;height:24px;margin-bottom:10px;transition: all 0.5s ease;}
+.rope-container{position:relative;height:200px;margin:30px 0;flex:1;display:flex;justify-content:center;align-items:center;}
+.rope{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:300px;height:15px;background:var(--orange);border-radius:10px;transition: all 0.5s cubic-bezier(0.68,-0.55,0.27,1.55);}
+.knot{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:40px;height:40px;background:#d89b49;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#fff;z-index:2;transition: all 0.5s cubic-bezier(0.68,-0.55,0.27,1.55);}
+.players{position:absolute;top:50%;transform:translateY(-50%);}
+.player{width:40px;height:40px;background:#ccc;border-radius:50%;display:inline-block;margin:0 5px;transition: all 0.5s cubic-bezier(0.68,-0.55,0.27,1.55);}
+.player.red{background:var(--red);}
+.player.blue{background:var(--blue);}
+.timer{text-align:center;font-size:18px;margin-bottom:10px;color:#555;}
+.history{max-height:150px;overflow:auto;background:#f9f1df;padding:8px;border-radius:8px;margin-top:10px;}
+.history div{padding:4px 2px;border-bottom:1px solid #eee;font-size:14px;transition:all 0.3s;}
+.confetti{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999;}
+@keyframes shake{0%{transform:translateX(0);}25%{transform:translateX(-8px);}50%{transform:translateX(8px);}75%{transform:translateX(-8px);}100%{transform:translateX(0);}}
+/*----------------- Дополнительные стили для анимаций -----------------*/
+.player.moving{animation:movePlayer 0.5s;}
+@keyframes movePlayer{0%{transform:translateY(0);}50%{transform:translateY(-5px);}100%{transform:translateY(0);}}
+.message.ok{color:green;transform:scale(1.2);transition:all 0.5s;}
+.message.bad{color:red;animation:shake 0.4s;}
+.progress.red{background:var(--red);}
+.progress.blue{background:var(--blue);}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Арқан Тартыс — Математика</h1>
+<div class="board">
+<div class="team" id="team-blue">
+<h2>Көк команда</h2>
+<div class="score" id="score-blue">0</div>
+<div class="progress-container"><div class="progress blue" id="progress-blue"></div></div>
+<div class="timer" id="timer-blue">20</div>
+<div class="calculator">
+<input type="text" id="input-blue" placeholder="Жүктелуде">
+<button id="submit-blue">Жіберу</button>
+</div>
+<div class="message" id="msg-blue"></div>
+<div class="history" id="history-blue"></div>
+</div>
+
+<div class="rope-container">
+<div class="players" style="left:-70px;">
+<div class="player blue" id="blue1"></div>
+<div class="player blue" id="blue2"></div>
+</div>
+<div class="rope" id="rope"></div>
+<div class="knot" id="knot">🔗</div>
+<div class="players" style="right:-70px;">
+<div class="player red" id="red1"></div>
+<div class="player red" id="red2"></div>
+</div>
+</div>
+
+<div class="team" id="team-red">
+<h2>Қызыл команда</h2>
+<div class="score" id="score-red">0</div>
+<div class="progress-container"><div class="progress red" id="progress-red"></div></div>
+<div class="timer" id="timer-red">20</div>
+<div class="calculator">
+<input type="text" id="input-red" placeholder="Жүктелуде">
+<button id="submit-red">Жіберу</button>
+</div>
+<div class="message" id="msg-red"></div>
+<div class="history" id="history-red"></div>
+</div>
+</div>
+</div>
+
+<canvas id="confetti" class="confetti"></canvas>
+<audio id="rope-sound" src="https://cdn.pixabay.com/download/audio/2021/10/26/audio_b5db3b9f8f.mp3?filename=correct-2-46133.mp3"></audio>
+<audio id="wrong-sound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_2de7b6b2f8.mp3?filename=wrong-6053.mp3"></audio>
+
+<script>
+// ------------------ State ------------------
+let state={blue:0,red:0,max:15};
+let rope=document.getElementById('rope');
+let knot=document.getElementById('knot');
+let progressBlue=document.getElementById('progress-blue');
+let progressRed=document.getElementById('progress-red');
+let ropeSound=document.getElementById('rope-sound');
+let wrongSound=document.getElementById('wrong-sound');
+let timerBlueEl=document.getElementById('timer-blue');
+let timerRedEl=document.getElementById('timer-red');
+let intervalBlue=null, intervalRed=null;
+let currentTaskBlue=null, currentTaskRed=null;
+let historyBlueEl=document.getElementById('history-blue');
+let historyRedEl=document.getElementById('history-red');
+let bluePlayers=[document.getElementById('blue1'),document.getElementById('blue2')];
+let redPlayers=[document.getElementById('red1'),document.getElementById('red2')];
+
+// ------------------ Helper Functions ------------------
+function updateRope(){
+let balance=(state.red-state.blue)/state.max;
+let center=50+balance*30;
+rope.style.left=center+'%';
+knot.style.left=center+'%';
+progressBlue.style.width=(state.blue/state.max*100)+'%';
+progressRed.style.width=(state.red/state.max*100)+'%';
+bluePlayers.forEach(p=>p.style.transform=`translateX(${balance*-30}px)`);
+redPlayers.forEach(p=>p.style.transform=`translateX(${balance*30}px)`);
+}
+
+function genTask(){
+let a=Math.floor(Math.random()*50+10);
+let b=Math.floor(Math.random()*20+5);
+let ops=['+','-','×','÷'];
+let op=ops[Math.floor(Math.random()*4)];
+let q='',ans='';
+if(op=='+'){q=`${a}+${b}`;ans=a+b;}
+if(op=='-'){q=`${a}-${b}`;ans=a-b;}
+if(op=='×'){q=`${a}×${b}`;ans=a*b;}
+if(op=='÷'){let val=a*b;q=`${val}÷${a}`;ans=b;}
+return {q,ans:String(ans)};
+}
+
+function startTimer(team){
+let time=20;
+let el=team=='blue'?timerBlueEl:timerRedEl;
+let interval=team=='blue'?intervalBlue:intervalRed;
+if(interval) clearInterval(interval);
+interval=setInterval(()=>{
+time--;
+el.textContent=time;
+if(time<=0){clearInterval(interval);checkAnswer(team);}
+},1000);
+if(team=='blue') intervalBlue=interval; else intervalRed=interval;
+}
+
+function checkAnswer(team){
+let input=document.getElementById('input-'+team);
+let msg=document.getElementById('msg-'+team);
+let val=input.value.trim();
+let task=team=='blue'?currentTaskBlue:currentTaskRed;
+if(val===task.ans){
+state[team]+=1; ropeSound.currentTime=0; ropeSound.play();
+msg.textContent='жарайсың'; msg.className='message ok';
+rope.animate([{transform:'translateX(0)'},{transform:`translateX(${team=='blue'? -15:15}px)`},{transform:'translateX(0)'}],{duration:400});
+[...bluePlayers,...redPlayers].forEach(p=>p.classList.add('moving'));
+setTimeout(()=>[...bluePlayers,...redPlayers].forEach(p=>p.classList.remove('moving')),400);
+} else {msg.textContent='қате'; msg.className='message bad'; wrongSound.currentTime=0; wrongSound.play();}
+updateRope();
+let histEl=team=='blue'?historyBlueEl:historyRedEl;
+let div=document.createElement('div');
+div.textContent=`${task.q} → ${val} (${val===task.ans?'Дұрыс':'Қате'})`;
+histEl.prepend(div);
+let newTask=genTask();
+if(team=='blue'){currentTaskBlue=newTask;document.getElementById('input-blue').placeholder=newTask.q;}
+else {currentTaskRed=newTask;document.getElementById('input-red').placeholder=newTask.q;}
+input.value=''; startTimer(team); if(state[team]>=state.max) win(team);
+}
+
+document.getElementById('submit-blue').onclick=()=>checkAnswer('blue');
+document.getElementById('submit-red').onclick=()=>checkAnswer('red');
+
+let confettiCanvas=document.getElementById('confetti');
+let ctx=confettiCanvas.getContext('2d');
+function launchConfetti(){
+confettiCanvas.width=window.innerWidth;
+confettiCanvas.height=window.innerHeight;
+let pieces=[];
+for(let i=0;i<300;i++){pieces.push({x:Math.random()*confettiCanvas.width,y:Math.random()*confettiCanvas.height,dx:(Math.random()-0.5)*6,dy:2+Math.random()*4,r:5+Math.random()*5,color:Math.random()>0.5?'#d42f2f':'#1366d6'});}
+let t=0;
+let id=setInterval(()=>{ctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);pieces.forEach(p=>{p.x+=p.dx;p.y+=p.dy;ctx.beginPath();ctx.fillStyle=p.color;ctx.arc(p.x,p.y,p.r,0,2*Math.PI);ctx.fill();});t++;if(t>120){clearInterval(id);ctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);}},16);
+}
+
+function win(team){alert((team=='blue'?'Көк':'Қызыл')+' команда жеңді!');launchConfetti();}
+currentTaskBlue=genTask(); currentTaskRed=genTask();
+document.getElementById('input-blue').placeholder=currentTaskBlue.q;
+document.getElementById('input-red').placeholder=currentTaskRed.q;
+startTimer('blue'); startTimer('red');
+updateRope();
+</script>
+</body>
+</html>
+<script>
+// ------------------ Дополнительные микродвижения игроков ------------------
+function animatePlayers(team){
+  let players=team=='blue'?bluePlayers:redPlayers;
+  players.forEach(p=>{
+    p.style.transition='transform 0.3s ease-in-out';
+    p.style.transform='translateY(-10px)';
+    setTimeout(()=>p.style.transform='translateY(0)',300);
+  });
+}
+
+// ------------------ Звуки перетягивания ------------------
+function ropePullSound(){
+  ropeSound.currentTime=0;
+  ropeSound.play();
+}
+
+// ------------------ Мягкая анимация движения веревки ------------------
+function smoothRope(){
+  let balance=(state.red-state.blue)/state.max;
+  let center=50+balance*30;
+  rope.style.transition='left 0.6s cubic-bezier(0.68,-0.55,0.27,1.55)';
+  knot.style.transition='left 0.6s cubic-bezier(0.68,-0.55,0.27,1.55)';
+  rope.style.left=center+'%';
+  knot.style.left=center+'%';
+}
+
+// ------------------ Анимация прогресс-бара ------------------
+function animateProgress(team){
+  let progressEl=team=='blue'?progressBlue:progressRed;
+  progressEl.style.transition='width 0.6s ease-in-out, background 0.6s ease';
+  progressEl.style.width=(state[team]/state.max*100)+'%';
+}
+
+// ------------------ Проверка ответа с расширенной анимацией ------------------
+function checkAnswerExtended(team){
+  let input=document.getElementById('input-'+team);
+  let msg=document.getElementById('msg-'+team);
+  let val=input.value.trim();
+  let task=team=='blue'?currentTaskBlue:currentTaskRed;
+  if(val===task.ans){
+    state[team]+=1; ropePullSound();
+    msg.textContent='жарайсың'; msg.className='message ok';
+    smoothRope(); animatePlayers(team); animateProgress(team);
+  } else {
+    msg.textContent='қате'; msg.className='message bad';
+    wrongSound.currentTime=0; wrongSound.play();
+    rope.animate([{transform:'translateX(0)'},{transform:`translateX(${team=='blue'?15:-15}px)`},{transform:'translateX(0)'}],{duration:400});
+  }
+  let histEl=team=='blue'?historyBlueEl:historyRedEl;
+  let div=document.createElement('div');
+  div.textContent=`${task.q} → ${val} (${val===task.ans?'Дұрыс':'Қате'})`;
+  histEl.prepend(div);
+  let newTask=genTask();
+  if(team=='blue'){currentTaskBlue=newTask;document.getElementById('input-blue').placeholder=newTask.q;}
+  else {currentTaskRed=newTask;document.getElementById('input-red').placeholder=newTask.q;}
+  input.value='';
+  startTimer(team);
+  if(state[team]>=state.max) win(team);
+}
+
+// ------------------ Расширенные эффекты конфетти ------------------
+function launchConfettiExtended(){
+  confettiCanvas.width=window.innerWidth;
+  confettiCanvas.height=window.innerHeight;
+  let pieces=[];
+  for(let i=0;i<400;i++){
+    pieces.push({x:Math.random()*confettiCanvas.width,y:Math.random()*confettiCanvas.height,dx:(Math.random()-0.5)*10,dy:2+Math.random()*6,r:3+Math.random()*7,color:Math.random()>0.5?'#d42f2f':'#1366d6'});
+  }
+  let t=0;
+  let id=setInterval(()=>{
+    ctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
+    pieces.forEach(p=>{
+      p.x+=p.dx;
+      p.y+=p.dy;
+      if(p.y>confettiCanvas.height)p.y=0;
+      ctx.beginPath();
+      ctx.fillStyle=p.color;
+      ctx.arc(p.x,p.y,p.r,0,2*Math.PI);
+      ctx.fill();
+    });
+    t++; if(t>150){clearInterval(id);ctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);}
+  },16);
+}
+
+// ------------------ Победа с расширенной анимацией ------------------
+function winExtended(team){
+  alert((team=='blue'?'Көк':'Қызыл')+' команда жеңді!');
+  launchConfettiExtended();
+  rope.style.transition='all 1s ease'; knot.style.transition='all 1s ease';
+  rope.style.transform='scale(1.2)'; knot.style.transform='scale(1.3)';
+  bluePlayers.forEach(p=>p.style.transform='scale(1.2)');
+  redPlayers.forEach(p=>p.style.transform='scale(1.2)');
+}
+
+// ------------------ Повторяемая логика для обработки кнопок ------------------
+document.getElementById('submit-blue').onclick=()=>checkAnswerExtended('blue');
+document.getElementById('submit-red').onclick=()=>checkAnswerExtended('red');
+
+// ------------------ Инициализация ------------------
+currentTaskBlue=genTask(); currentTaskRed=genTask();
+document.getElementById('input-blue').placeholder=currentTaskBlue.q;
+document.getElementById('input-red').placeholder=currentTaskRed.q;
+startTimer('blue'); startTimer('red');
+updateRope(); animateProgress('blue'); animateProgress('red');
+</script>
+<!-- Негізгі кодтың соңында -->
+<script src="animations.js"></script> <!-- Егер бөлек файл болса -->
+<!-- немесе тікелей -->
+<script>
+  // Мұнда мен жіберген соңғы скрипт
+</script>
+</body>
+</html>
+<audio id="ropeSound" src="rope-pull.mp3"></audio>
+<audio id="wrongSound" src="wrong.mp3"></audio>
+<audio id="confettiSound" src="confetti.mp3"></audio>
+
